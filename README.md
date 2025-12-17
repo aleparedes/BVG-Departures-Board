@@ -2,6 +2,8 @@
 
 A real-time LED-style departure board for Berlin's public transport system (BVG/VBB). This single-page web application displays upcoming bus, tram, and train departures with an authentic LED display aesthetic.
 
+🌐 **[Live Demo](https://aleparedes.github.io/BVG-Departures-Board/)** - Try it now!
+
 ## Purpose
 
 This project was born out of a simple daily frustration: constantly checking my phone before leaving home to catch the bus. Instead of repeatedly pulling out my phone, I decided to repurpose an old unused phone and mount it in my corridor as a permanent departure display.
