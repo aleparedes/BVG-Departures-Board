@@ -2,7 +2,7 @@
  * Main application configuration
  */
 export const CONFIG = {
-  stopQuery: "Rotkopfweg",              // 🚨 STOP NAME - CONFIGURE HERE 🚨
+  stopQuery: "Alexanderplatz",          // 🚨 STOP NAME - CONFIGURE HERE 🚨
   maxRows: 5,                          // Maximum number of rows to display
   dotBaselineRows: 6,                  // Base rows for LED dot height calculation
   lookAheadMinutes: 60,                // Minutes ahead to search for departures
