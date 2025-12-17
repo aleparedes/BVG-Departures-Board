@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Abfahrten – Bus Matrix</title>
+  
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@800;900&display=swap" rel="stylesheet">
+
+<style>
+    /* DESIGN SYSTEM */
+    :root {
+      --space-xs: 2px;
+      --space-sm: 4px;
+      --space-md: 6px;
+      --space-lg: 8px;
+      --space-xl: 12px;
+      
+      --header-height: 42px;
+      --footer-height: 44px;
+      --board-padding: var(--space-lg);
+      --column-gap: 1px;
+      
+      --line-width: 120px;
+      --eta-width: 140px;
+      --unit-width: 60px;
+      --destination-extra-chars: 3;
+      
+      --color-frame-bg: #e7e9ed;
+      --color-frame-border: #c3c7cd;
+      --color-text-primary: #111;
+      --color-text-secondary: #4a4f57;
+      --color-bvg-yellow: #ffd200;
+      --color-led-bg: #070707;
+      --color-led-glow: #ffc23a;
+      --color-led-alert: #ff6666;
+      --color-white: #fff;
+      --color-black: #000;
+      
+      /* TYPOGRAPHY */
+      --font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-weight-bold: 800;        /* Bold weight for headers */
+      --font-weight-black: 900;       /* Black weight for LED text */
+      
+      /* === ANIMATIONS === */
+      /* Animation configuration for realistic LED effects */
+      --animation-flicker-duration: 4s;  /* LED flicker duration */
+      --animation-transition: 0.5s;       /* Smooth transitions */
+    }
+
+    /* ===== RESET & BASE STYLES ===== */
+    /* Basic reset to remove default browser styles */
+    * {
+      box-sizing: border-box; /* Include padding and border in dimension calculations */
+    }
+
+    /* Base styles for html and body */
+  html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--color-led-bg);
+      font-family: var(--font-family);
+      color: var(--color-text-primary);
+    }
+
+    /* Hide scrollbars for clean interface */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* ===== ANIMATIONS ===== */
+    /* Subtle flicker animation to simulate real LED behavior */
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }    /* Normal state */
+      50% { opacity: 0.98; }      /* Minimal flicker */
+      70% { opacity: 0.99; }      /* Intermediate flicker */
+    }
+
+    /* Pulse animation for loading states */
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }  /* Dim state */
+      50% { opacity: 1; }         /* Bright state */
+    }
+
+    /* ===== MAIN LAYOUT ===== */
+    /* Main container that simulates the physical frame of the LED display */
+    .departure-board {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--color-led-bg);
+    }
+
+    /* HEADER SECTION - Hidden */
+    .board-header {
+      display: none;
+    }
+
+    /* ===== LED DISPLAY SECTION ===== */
+    /* Main area that simulates the real LED display with visual effects */
+    .led-display {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: var(--color-led-bg);
+      padding: var(--space-xs);
+      position: relative;
+      overflow: hidden;
+      animation: flicker var(--animation-flicker-duration) infinite alternate;
+    }
+
+    /* LED texture effect with dot pattern */
+    .led-display::before {
+    content: "";
+      position: absolute;                   /* Absolute position for overlay */
+      inset: 0;                            /* Cover entire area */
+      background-image: radial-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1.1px); /* Dot pattern */
+      background-size: var(--space-md) var(--space-md); /* Pattern size */
+      mix-blend-mode: screen;              /* Blend mode for LED effect */
+      pointer-events: none;                 /* Don't interfere with interactions */
+    }
+
+    /* ===== DEPARTURE ROWS ===== */
+    .departure-row {
+    display: grid;
+      grid-template-columns: var(--line-width) 1fr auto;
+    align-items: center;
+    padding: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    white-space: nowrap;
+      column-gap: var(--column-gap);
+    }
+
+    .departure-row:last-child {
+      border-bottom: 0;
+    }
+
+    .departure-row__line {
+      padding-left: var(--space-xs);
+      padding-right: var(--space-xs);
+      display: flex;
+      align-items: center;
+      gap: 1px;
+    }
+
+    .departure-row__destination {
+      overflow: hidden;
+      position: relative;
+    }
+
+    .departure-row__destination.scrollable {
+      overflow: hidden;
+      position: relative;
+    }
+
+    .departure-row__destination.scrollable .scrolling-content {
+      display: inline-block;
+      white-space: nowrap;
+      will-change: transform;
+      position: relative;
+      left: 0;
+      animation: scrollLeft 4s linear infinite;
+    }
+
+    @keyframes scrollLeft {
+      0% {
+        transform: translateX(0);
+      }
+      50% {
+        transform: translateX(-50%);
+      }
+      100% {
+        transform: translateX(-100%);
+      }
+    }
+
+    .departure-row__eta {
+    justify-self: end;
+    padding-right: var(--space-xs);
+    padding-left: var(--space-xs);
+    display: flex;
+    align-items: center;
+      gap: var(--space-xs);
+      margin-right: 0;
+    }
+
+    .departure-row.arriving-now {
+      animation: blinkRowFast 0.5s infinite;
+    }
+
+    @keyframes blinkRowFast {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0.3; }
+    }
+
+    /* ===== MODAL ===== */
+    .station-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: var(--color-white);
+      padding: var(--space-xl);
+      border-radius: var(--space-md);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+      width: 90%;
+    }
+
+    .modal-content h2 {
+      margin: 0 0 var(--space-lg) 0;
+      color: var(--color-text-primary);
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .station-input-container {
+      display: flex;
+      gap: var(--space-sm);
+      align-items: center;
+      margin-bottom: var(--space-md);
+    }
+
+    .autocomplete-wrapper {
+      position: relative;
+      display: inline-block;
+      flex: 1;
+    }
+
+    .station-input {
+      width: 100%;
+      padding: var(--space-sm) var(--space-md);
+      border: 2px solid #cfd3d8;
+      border-radius: var(--space-sm);
+      font-size: 16px;
+      font-family: var(--font-family);
+      background: var(--color-white);
+      color: var(--color-text-primary);
+    }
+
+    .station-input:focus {
+      outline: none;
+      border-color: var(--color-bvg-yellow);
+      box-shadow: 0 0 0 3px rgba(255, 210, 0, 0.2);
+    }
+
+    .suggestions-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--color-white);
+      border: 1px solid #cfd3d8;
+      border-top: none;
+      border-radius: 0 0 var(--space-sm) var(--space-sm);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1001;
+      display: none;
+    }
+
+    .suggestion-item {
+      padding: var(--space-sm) var(--space-md);
+      cursor: pointer;
+      font-size: 14px;
+      font-family: var(--font-family);
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .suggestion-item:hover {
+      background: var(--color-bvg-yellow);
+      color: var(--color-text-primary);
+    }
+
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+
+    .update-btn {
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-bvg-yellow);
+      color: var(--color-text-primary);
+      border: none;
+      border-radius: var(--space-sm);
+      font-size: 16px;
+      font-family: var(--font-family);
+      font-weight: var(--font-weight-bold);
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .update-btn:hover {
+      background: #e6c200;
+    }
+
+    .station-info {
+      text-align: center;
+      color: var(--color-text-secondary);
+      font-size: 14px;
+      min-height: 20px;
+    }
+
+    /* ===== FOOTER ===== */
+    .board-footer {
+    display: grid;
+      grid-template-columns: auto 1fr auto;
+    align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md) var(--space-md) var(--space-lg) var(--space-md);
+    }
+
+    .station-input-container {
+      display: flex;
+      gap: var(--space-sm);
+      align-items: center;
+    }
+
+    .autocomplete-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    .station-input {
+      padding: var(--space-xs) var(--space-sm);
+      border: 1px solid #cfd3d8;
+      border-radius: var(--space-xs);
+      font-size: clamp(11px, 1.5vw, 14px);
+      font-family: var(--font-family);
+      background: var(--color-white);
+      color: var(--color-text-primary);
+      min-width: 150px;
+    }
+
+    .station-input:focus {
+      outline: none;
+      border-color: var(--color-bvg-yellow);
+      box-shadow: 0 0 0 2px rgba(255, 210, 0, 0.2);
+    }
+
+    .suggestions-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--color-white);
+      border: 1px solid #cfd3d8;
+      border-top: none;
+      border-radius: 0 0 var(--space-xs) var(--space-xs);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+    }
+
+    .suggestion-item {
+      padding: var(--space-xs) var(--space-sm);
+      cursor: pointer;
+      font-size: clamp(11px, 1.5vw, 14px);
+      font-family: var(--font-family);
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .suggestion-item:hover {
+      background: var(--color-bvg-yellow);
+      color: var(--color-text-primary);
+    }
+
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+
+    .update-btn {
+      padding: var(--space-xs) var(--space-sm);
+      background: var(--color-bvg-yellow);
+      color: var(--color-text-primary);
+      border: 1px solid #b79b00;
+      border-radius: var(--space-xs);
+      font-size: clamp(11px, 1.5vw, 14px);
+      font-family: var(--font-family);
+      font-weight: var(--font-weight-bold);
+      cursor: pointer;
+      transition: background-color var(--animation-transition);
+    }
+
+    .update-btn:hover {
+      background: #e6bc00;
+    }
+
+    .station-info {
+      background: var(--color-white);
+      border-top-right-radius: var(--space-sm);
+      border-bottom-right-radius: var(--space-sm);
+      padding: var(--space-md) var(--space-md);
+      font-weight: var(--font-weight-bold);
+    font-size: clamp(13px, 1.8vw, 18px);
+    color: #222;
+    max-width: 60vw;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+    .status-indicator {
+      justify-self: end;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-md);
+      font-size: clamp(12px, 1.8vw, 16px);
+      color: var(--color-text-secondary);
+    }
+
+    .bvg-brand {
+      background: var(--color-bvg-yellow);
+      color: var(--color-text-primary);
+      font-weight: 1000;
+      padding: var(--space-xs) var(--space-md);
+      border-radius: var(--space-xs);
+      border: 1px solid #b79b00;
+    }
+
+    .refresh-status {
+      padding: var(--space-xs) var(--space-md);
+      border-radius: 999px;
+      background: var(--color-white);
+      border: 1px solid #cfd3d8;
+      transition: background-color var(--animation-transition);
+    }
+
+    .refresh-status--loading {
+      background-color: var(--color-bvg-yellow) !important;
+      animation: pulse 1.5s infinite;
+    }
+
+    .refresh-status--error {
+      background-color: var(--color-led-alert) !important;
+      color: var(--color-white) !important;
+    }
+
+    /* ===== MESSAGE STATES ===== */
+  .led-message {
+    height: 100%;
+    display: grid;
+    place-items: center;
+    font-size: clamp(16px, 4vw, 30px);
+      font-weight: var(--font-weight-black);
+      color: var(--color-white);
+    text-align: center;
+    white-space: normal;
+  }
+
+    /* ===== RESPONSIVE DESIGN ===== */
+    @media (max-width: 768px) {
+      :root {
+        --line-width: 100px;
+        --eta-width: 140px;
+        --unit-width: 50px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      :root {
+        --line-width: 80px;
+        --eta-width: 120px;
+        --unit-width: 45px;
+      }
+    }
+</style>
+</head>
+
+<body>
+  <!-- Station Selection Modal -->
+  <div id="stationModal" class="station-modal">
+    <div class="modal-content">
+      <h2>Haltestelle auswählen</h2>
+      <div class="station-input-container">
+        <div class="autocomplete-wrapper">
+          <input type="text" id="stationInput" placeholder="Parada (ej: Alexanderplatz)" class="station-input">
+          <div id="suggestions" class="suggestions-dropdown"></div>
+        </div>
+        <button id="updateStationBtn" class="update-btn">Aktualisieren</button>
+      </div>
+      <div class="station-info" id="stationInfo">Haltestelle wird gesucht...</div>
+    </div>
+  </div>
+
+  <div class="departure-board">
+    <main class="led-display" id="ledDisplay">
+      <div class="led-message">Lade Daten...</div>
+    </main>
+  </div>
+
+<script>
+    /**
+     * Berlin Bus Departure Board
+     * Real-time LED display for public transport departures
+     */
+
+    // ===== GLOBAL CONFIGURATION =====
+    /**
+     * Main application configuration
+     */
+    const CONFIG = {
+      stopQuery: "Rotkopfweg",              // 🚨 STOP NAME - CONFIGURE HERE 🚨
+      maxRows: 5,                          // Maximum number of rows to display
+      dotBaselineRows: 6,                  // Base rows for LED dot height calculation
+      lookAheadMinutes: 60,                // Minutes ahead to search for departures
+      refreshInterval: 30000,               // Refresh interval in milliseconds (30s)
+      textBoost: 1.21,                     // Text size amplification factor
+      ledScale: 0.7,                       // LED dot scale
+      attenuateGlow: 0.9                   // LED glow attenuation factor
+    };
+
+    /**
+     * Public transport API endpoints
+     */
+    const API_ENDPOINTS = Object.freeze([
+      "https://v6.bvg.transport.rest",     // Primary BVG API (Berlin)
+      "https://v6.vbb.transport.rest"      // Secondary VBB API (Brandenburg)
+    ]);
+
+    // ===== DOM ELEMENTS =====
+    /**
+     * References to main DOM elements
+     */
+    const DOM = Object.freeze({
+      ledDisplay: document.getElementById('ledDisplay'),
+      stationModal: document.getElementById('stationModal'),
+      stationInput: document.getElementById('stationInput'),
+      updateBtn: document.getElementById('updateStationBtn'),
+      suggestions: document.getElementById('suggestions'),
+      stationInfo: document.getElementById('stationInfo')
+    });
+
+    // ===== STATE MANAGEMENT =====
+    /**
+     * Class to handle application state
+     */
+    class StateManager {
+      #lastRefreshTime = Date.now();  // Timestamp of last successful refresh
+      #isLoading = false;             // Current loading state
+      #refreshCountdown = CONFIG.refreshInterval / 1000; // Countdown in seconds
+
+      /**
+       * Getter to check if application is loading data
+       * @returns {boolean} true if loading, false otherwise
+       */
+      get isLoading() {
+        return this.#isLoading;
+      }
+
+      /**
+       * Sets loading state and updates UI
+       * @param {boolean} loading - New loading state
+       */
+      setLoading(loading) {
+        this.#isLoading = loading;
+        this.#updateRefreshStatus();
+      }
+
+      /**
+       * Updates timestamp of last successful refresh
+       * and refreshes visual state
+       */
+      updateRefreshTime() {
+        this.#lastRefreshTime = Date.now();
+        this.#refreshCountdown = CONFIG.refreshInterval / 1000; // Reset countdown
+        this.#updateRefreshStatus();
+      }
+
+      /**
+       * Updates visual state of refresh indicator
+       * Shows different states: loading, updated, error
+       * @private
+       */
+      #updateRefreshStatus() {
+        // No UI updates needed - only LED display
+      }
+
+      /**
+       * Sets error state and updates UI
+       */
+      setError() {
+        // Error state handled by LED display
+      }
+
+      /**
+       * Public method to update refresh status display
+       * Used by external timers
+       */
+      updateRefreshStatus() {
+        this.#updateRefreshStatus();
+      }
+    }
+
+    // ===== TEXT UTILITIES =====
+    /**
+     * Class to handle text-related operations
+     * Includes width measurement, truncation and sanitization
+     */
+    class TextUtils {
+      #measureContext = document.createElement('canvas').getContext('2d'); // Context for text measurement
+
+      /**
+       * Measures text width with specific font
+       * @param {string} text - Text to measure
+       * @param {number} fontSize - Font size in pixels
+       * @param {string} fontWeight - Font weight (default: '900')
+       * @returns {number} Text width in pixels
+       */
+      measureTextWidth(text, fontSize, fontWeight = '900') {
+        this.#measureContext.font = `${fontWeight} ${fontSize}px ${getComputedStyle(document.documentElement).getPropertyValue('--font-family')}`;
+        return this.#measureContext.measureText(text).width;
+      }
+
+      /**
+       * Calculates optimal font size based on available height
+       * @param {number} maxHeight - Maximum available height
+       * @param {number} factor - Scale factor (default: 0.78)
+       * @returns {number} Calculated font size
+       */
+      calculateFontSize(maxHeight, factor = 0.78) {
+  return Math.max(10, Math.floor(maxHeight * factor));
+}
+
+      /**
+       * Truncates text to fit within specific width
+       * Uses binary search for efficiency
+       * @param {string} text - Original text
+       * @param {number} fontSize - Font size
+       * @param {number} maxWidth - Maximum allowed width
+       * @returns {string} Truncated text
+       */
+      truncateText(text, fontSize, maxWidth) {
+        if (this.measureTextWidth(text, fontSize) <= maxWidth) {
+          return text;
+        }
+
+        // Binary search to find optimal cut point
+        let low = 0;
+        let high = text.length;
+        
+        while (low < high) {
+    const mid = Math.floor((low + high) / 2);
+          const truncated = text.slice(0, mid);
+          
+          if (this.measureTextWidth(truncated, fontSize) <= maxWidth) {
+            low = mid + 1;
+          } else {
+            high = mid;
+          }
+        }
+
+        return text.slice(0, Math.max(0, low - 1));
+      }
+
+      /**
+       * Sanitizes text for safe use in HTML/SVG
+       * Escapes special characters that could cause issues
+       * @param {string} text - Text to sanitize
+       * @returns {string} Sanitized text
+       */
+      sanitizeText(text) {
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      }
+    }
+
+    // ===== LED SVG GENERATOR =====
+    /**
+     * Class to generate LED-style SVG text with realistic effects
+     * Creates pixelated text with glow effects and dot patterns
+     */
+    class LEDSVGGenerator {
+      /**
+       * Generates LED-style SVG text with visual effects
+       * @param {string} text - Text to render
+       * @param {number} width - SVG width
+       * @param {number} height - SVG height
+       * @param {number} fontSize - Font size
+       * @param {Object} options - Rendering options (align, clipWidth)
+       * @returns {string} Complete SVG markup
+       */
+      generateSVG(text, width, height, fontSize, options = {}) {
+        const basePitch = Math.max(4, Math.floor(height / 10));
+        const pitch = Math.max(3, Math.floor(basePitch * CONFIG.ledScale));
+        const radius = Math.max(2, Math.floor(pitch * 0.40));
+        const padding = Math.floor(pitch * 0.85);
+        const glow = Math.max(0.4, Math.min(1.0, CONFIG.attenuateGlow || 1));
+        const fontSizeBoost = Math.floor(fontSize * CONFIG.textBoost);
+        const sanitizedText = textUtils.sanitizeText(text);
+        const uniqueId = `led-${Math.random().toString(36).slice(2, 8)}`;
+        
+        const clipWidth = Math.max(10, (options.clipWidth ?? (width - padding * 2)));
+        const align = options.align || 'left';
+        const x = align === 'right' ? (width - padding) : padding;
+  const textAnchor = align === 'right' ? 'end' : 'start';
+        const y = height * 0.72;
+  
+        const glowColor = 'var(--color-led-glow)';
+        const hotColor = '#ffe6a3';
+
+  return `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet" style="display:block">
+    <defs>
+              <pattern id="${uniqueId}-dots" patternUnits="userSpaceOnUse" width="${pitch}" height="${pitch}">
+                <radialGradient id="${uniqueId}-g" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="${hotColor}"/>
+          <stop offset="55%" stop-color="${glowColor}"/>
+          <stop offset="100%" stop-color="#563800"/>
+        </radialGradient>
+                <circle cx="${radius}" cy="${radius}" r="${radius}" fill="url(#${uniqueId}-g)"/>
+      </pattern>
+              <filter id="${uniqueId}-dilate">
+                <feMorphology operator="dilate" radius="${Math.max(0, Math.floor(radius * 0.28))}"/>
+      </filter>
+              <filter id="${uniqueId}-glow" x="-12%" y="-12%" width="124%" height="124%">
+                <feGaussianBlur stdDeviation="${Math.max(0.4, radius * 0.28)}" result="b"/>
+        <feComponentTransfer>
+          <feFuncA type="linear" slope="${glow}"/>
+        </feComponentTransfer>
+          <feMerge>
+          <feMergeNode in="b"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+              <clipPath id="${uniqueId}-clip">
+                <rect x="${align === 'right' ? (width - clipWidth - padding) : 0}" y="0" width="${clipWidth}" height="${height}"/>
+              </clipPath>
+              <mask id="${uniqueId}-mask">
+        <rect width="100%" height="100%" fill="black"/>
+                <g filter="url(#${uniqueId}-dilate)" clip-path="url(#${uniqueId}-clip)">
+                  <text class="svg-text" x="${x}" y="${y}" text-anchor="${textAnchor}" 
+                        font-family="var(--font-family)" 
+                        font-weight="900" 
+                        font-size="${fontSizeBoost}" 
+                        fill="white" 
+                        letter-spacing="-0.01em">${sanitizedText}</text>
+        </g>
+      </mask>
+    </defs>
+            <rect width="100%" height="100%" fill="url(#${uniqueId}-dots)" mask="url(#${uniqueId}-mask)" filter="url(#${uniqueId}-glow)"/>
+  </svg>`;
+}
+    }
+
+    // ===== API SERVICE =====
+    /**
+     * Class to handle API communication and data fetching
+     * Manages requests to public transport APIs with fallback support
+     */
+    class APIService {
+      async #findStops(stopName, apiBase) {
+        if (!stopName) {
+          throw new Error("Stop query is empty.");
+        }
+
+        // Use more specific search parameters according to API docs
+        const url = `${apiBase}/locations?query=${encodeURIComponent(stopName)}&results=5&stops=true&addresses=false&poi=false&fuzzy=true&pretty=false`;
+        const response = await fetch(url, { cache: "no-store" });
+        
+        if (!response.ok) {
+          throw new Error(`findStops ${apiBase}: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        return data
+          .filter(item => item.type === "stop")
+          .slice(0, 1) // Only take the first (most relevant) result
+          .map(stop => ({ id: stop.id, name: stop.name }));
+      }
+
+      /**
+       * Search for station suggestions as user types
+       * @param {string} query - Search query
+       * @returns {Array} Array of station suggestions
+       */
+      async searchSuggestions(query) {
+        if (!query || query.length < 2) {
+          return [];
+        }
+
+        try {
+          const url = `${API_ENDPOINTS[0]}/locations?query=${encodeURIComponent(query)}&results=8&stops=true&addresses=false&poi=false&fuzzy=true&pretty=false`;
+          const response = await fetch(url, { cache: "no-store" });
+          
+          if (!response.ok) {
+            return [];
+          }
+
+          const data = await response.json();
+          return data
+            .filter(item => item.type === "stop")
+            .map(stop => ({ id: stop.id, name: stop.name }));
+        } catch (error) {
+          console.warn("Error fetching suggestions:", error);
+          return [];
+        }
+      }
+
+      async #fetchDepartures(stopId, apiBase) {
+        const params = new URLSearchParams({
+          duration: String(CONFIG.lookAheadMinutes),
+          remarks: 'false',           // Don't include hints & warnings
+          subStops: 'false',           // Don't include sub-stops
+          entrances: 'false',         // Don't include entrances
+          pretty: 'false'             // Don't pretty-print JSON
+        });
+
+        const url = `${apiBase}/stops/${encodeURIComponent(stopId)}/departures?${params.toString()}`;
+        const response = await fetch(url, { cache: "no-store" });
+        
+        if (!response.ok) {
+          throw new Error(`departures ${apiBase} ${stopId}: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return Array.isArray(data) ? data : (data.departures || []);
+      }
+
+      async loadDepartureData() {
+        if (!CONFIG.stopQuery) {
+    throw new Error("❌ FEHLER: Haltestellenabfrage fehlt. Bitte 'stopQuery' Variable prüfen.");
+  }
+  
+        for (const apiBase of API_ENDPOINTS) {
+          try {
+            const stops = await this.#findStops(CONFIG.stopQuery, apiBase);
+            
+            if (stops.length) {
+              DOM.stationInfo.textContent = stops[0].name || CONFIG.stopQuery;
+            }
+
+            const departurePromises = stops.map(stop => this.#fetchDepartures(stop.id, apiBase));
+            const results = await Promise.allSettled(departurePromises);
+            const departures = results
+              .filter(result => result.status === 'fulfilled')
+              .flatMap(result => result.value);
+
+            if (departures.length > 0) {
+              return departures;
+            }
+          } catch (error) {
+            console.warn(`API failure ${apiBase}:`, error);
+          }
+        }
+
+  throw new Error("Alle Datenquellen sind fehlgeschlagen.");
+      }
+    }
+
+    // ===== DATA PROCESSING =====
+    /**
+     * Class to process and normalize API data
+     * Handles data transformation and filtering for display
+     */
+    class DataProcessor {
+      normalizeDeparture(departure) {
+        return {
+          when: departure.when || departure.plannedWhen,
+          plannedWhen: departure.plannedWhen,
+          line: departure.line?.name || departure.line?.id || '',
+          product: departure.line?.product || departure.line?.mode || '',
+          direction: departure.direction || departure.destination?.name || departure.directionId || '—',
+          cancelled: !!departure.cancelled,
+          delay: departure.delay || 0,
+          // Additional fields for better validation
+          platform: departure.platform,
+          remarks: departure.remarks || [],
+          tripId: departure.tripId,
+          origin: departure.origin,
+          destination: departure.destination,
+          mode: departure.mode,
+          // Real-time status indicators
+          realtimeDataUpdatedAt: departure.realtimeDataUpdatedAt,
+          currentTripPosition: departure.currentTripPosition
+        };
+      }
+
+      processDepartures(departures) {
+        const now = new Date();
+        const maxDepartureTime = new Date(now.getTime() + (CONFIG.lookAheadMinutes * 60 * 1000));
+        
+        
+        return departures
+          .map(dep => this.normalizeDeparture(dep))
+          .filter(dep => {
+            // Basic validation
+            if (!dep.when || dep.cancelled) {
+              return false;
+            }
+
+            const departureTime = new Date(dep.when);
+            
+            // Filter out departures that are too far in the future
+            if (departureTime > maxDepartureTime) {
+              return false;
+            }
+
+            // Filter out departures that are significantly in the past
+            // Allow some tolerance for delays (up to 5 minutes past)
+            const fiveMinutesAgo = new Date(now.getTime() - (5 * 60 * 1000));
+            if (departureTime < fiveMinutesAgo) {
+              return false;
+            }
+
+            // Additional validation for real-time data
+            if (dep.realtimeDataUpdatedAt) {
+              const dataAge = now.getTime() - new Date(dep.realtimeDataUpdatedAt).getTime();
+              // If real-time data is older than 10 minutes, be more cautious
+              if (dataAge > (10 * 60 * 1000)) {
+                // Only show if departure is still reasonable
+                const plannedTime = new Date(dep.plannedWhen || dep.when);
+                const timeDiff = Math.abs(departureTime.getTime() - plannedTime.getTime());
+                // If actual time differs significantly from planned (>15 min), skip
+                if (timeDiff > (15 * 60 * 1000)) {
+                  return false;
+                }
+              }
+            }
+
+            // Check for problematic remarks that might indicate issues
+            if (dep.remarks && dep.remarks.length > 0) {
+              const problematicRemarks = [
+                'cancelled', 'cancellation', 'ausfall', 'entfällt',
+                'not operating', 'nicht in betrieb', 'service suspended'
+              ];
+              
+              const hasProblematicRemark = dep.remarks.some(remark => {
+                const remarkText = (remark.text || remark).toLowerCase();
+                return problematicRemarks.some(problem => remarkText.includes(problem));
+              });
+              
+              if (hasProblematicRemark) {
+                return false;
+              }
+            }
+
+            return true;
+          })
+          .sort((a, b) => new Date(a.when) - new Date(b.when))
+          .slice(0, CONFIG.maxRows);
+      }
+
+      calculateMinutesUntil(departureTime) {
+        const now = new Date();
+        const departure = new Date(departureTime);
+        const minutes = Math.round((departure.getTime() - now.getTime()) / 60000);
+        
+        // Return 0 for past departures, but allow some tolerance for delays
+        return Math.max(0, minutes);
+      }
+
+      /**
+       * Calculate delay information for display
+       * @param {Object} departure - Normalized departure object
+       * @returns {Object} Delay information
+       */
+      calculateDelayInfo(departure) {
+        if (!departure.plannedWhen) {
+          return { hasDelay: false, delayMinutes: 0, isOnTime: true };
+        }
+
+        const plannedTime = new Date(departure.plannedWhen);
+        const actualTime = new Date(departure.when);
+        const delayMinutes = Math.round((actualTime.getTime() - plannedTime.getTime()) / 60000);
+        
+        return {
+          hasDelay: delayMinutes > 0,
+          delayMinutes: Math.max(0, delayMinutes),
+          isOnTime: delayMinutes <= 1, // Consider on time if delay is 1 minute or less
+          isEarly: delayMinutes < 0
+        };
+      }
+    }
+
+    // ===== RENDERER =====
+    /**
+     * Class to handle DOM rendering and visual updates
+     * Manages creation of departure rows and LED display updates
+     */
+    class Renderer {
+      createDepartureRow(departure, dotHeight, fontSize, destinationWidth, lineColumnWidth, etaColumnWidth, unitWidth) {
+        const row = document.createElement('div');
+        row.className = 'departure-row';
+
+        // Check if arrival time is 0 minutes and add blinking class
+        const minutes = dataProcessor.calculateMinutesUntil(departure.when);
+        if (minutes === 0) {
+          row.classList.add('arriving-now'); // Fast blinking for immediate arrival
+        }
+
+        // Line column
+        const lineColumn = this.#createLineColumn(departure, dotHeight, fontSize, lineColumnWidth);
+        row.appendChild(lineColumn);
+
+        // Destination column
+        const destinationColumn = this.#createDestinationColumn(departure, dotHeight, fontSize, destinationWidth);
+        row.appendChild(destinationColumn);
+
+        // ETA column
+        const etaColumn = this.#createETAColumn(departure, dotHeight, fontSize, etaColumnWidth, unitWidth);
+        row.appendChild(etaColumn);
+
+        return row;
+      }
+
+      #createLineColumn(departure, dotHeight, fontSize, lineColumnWidth) {
+        const lineColumn = document.createElement('div');
+        lineColumn.className = 'departure-row__line';
+        const lineCode = (departure.line || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 4) || '—';
+        lineColumn.innerHTML = ledSVG.generateSVG(
+          lineCode, 
+          lineColumnWidth - 8, 
+          dotHeight, 
+          fontSize, 
+          { clipWidth: lineColumnWidth - 8, align: 'left' }
+        );
+        lineColumn.style.width = lineColumnWidth + 'px';
+        return lineColumn;
+      }
+
+      #createDestinationColumn(departure, dotHeight, fontSize, destinationWidth) {
+        const destinationColumn = document.createElement('div');
+        destinationColumn.className = 'departure-row__destination';
+        
+        const fullText = departure.direction;
+        const textWidth = textUtils.measureTextWidth(fullText, Math.floor(fontSize * CONFIG.textBoost));
+        const availableWidth = destinationWidth - 2;
+        
+        // Activate scroll slightly before content would be cut off
+        const marginBuffer = 100; // pixels buffer before activating scroll
+        if (textWidth > (availableWidth - marginBuffer)) {
+          destinationColumn.classList.add('scrollable');
+          
+          // Create truly infinite text with many repetitions
+          const separator = '\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0';
+          let infiniteText = '';
+          for (let i = 0; i < 100; i++) {
+            infiniteText += fullText + separator;
+          }
+          
+          // Calculate total width needed for smooth scrolling
+          const separatorWidth = textUtils.measureTextWidth(separator, Math.floor(fontSize * CONFIG.textBoost));
+          const totalTextWidth = textUtils.measureTextWidth(infiniteText, Math.floor(fontSize * CONFIG.textBoost));
+          const svgWidth = Math.max(destinationWidth * 2, totalTextWidth + 100); // Extra padding
+          
+          // Create wrapper div for smooth transform animation
+          const wrapper = document.createElement('div');
+          wrapper.className = 'scrolling-content';
+          
+          // Generate SVG content with proper width
+          const svgContent = ledSVG.generateSVG(
+            infiniteText, 
+            svgWidth, 
+            dotHeight, 
+            fontSize, 
+            { clipWidth: svgWidth, align: 'left' }
+          );
+          
+          wrapper.innerHTML = svgContent;
+          destinationColumn.appendChild(wrapper);
+          
+          // Use CSS animation with very long duration to avoid visible resets
+          const baseSpeed = 150; // pixels per second (5x faster)
+          const animationDuration = totalTextWidth / baseSpeed;
+          wrapper.style.animationDuration = `${animationDuration}s`;
+        } else {
+          // Normal truncated text for shorter destinations
+          const truncatedDestination = textUtils.truncateText(
+            fullText, 
+            Math.floor(fontSize * CONFIG.textBoost), 
+            availableWidth
+          );
+          destinationColumn.innerHTML = ledSVG.generateSVG(
+            truncatedDestination, 
+            destinationWidth, 
+            dotHeight, 
+            fontSize, 
+            { clipWidth: availableWidth, align: 'left' }
+          );
+        }
+        
+        return destinationColumn;
+      }
+
+
+      #createETAColumn(departure, dotHeight, fontSize, etaColumnWidth, unitWidth) {
+        const etaColumn = document.createElement('div');
+        etaColumn.className = 'departure-row__eta';
+        etaColumn.style.width = etaColumnWidth + 'px';
+        
+        const minutes = dataProcessor.calculateMinutesUntil(departure.when);
+        
+        const numberWidth = etaColumnWidth - unitWidth - 4;
+
+        // Minutes number
+        const minutesElement = document.createElement('div');
+        minutesElement.innerHTML = ledSVG.generateSVG(
+          String(minutes), 
+          numberWidth, 
+          dotHeight, 
+          fontSize, 
+          { clipWidth: numberWidth - 2, align: 'right' }
+        );
+        etaColumn.appendChild(minutesElement);
+
+        // Unit text
+        const unitElement = document.createElement('div');
+        unitElement.innerHTML = ledSVG.generateSVG(
+          'Min', 
+          unitWidth, 
+          dotHeight, 
+          fontSize, 
+          { clipWidth: unitWidth - 2, align: 'left' }
+        );
+        etaColumn.appendChild(unitElement);
+
+        return etaColumn;
+      }
+
+      renderDepartures(departures, totalHeight, destinationWidth, lineColumnWidth, etaColumnWidth, dotHeight, fontSize) {
+        DOM.ledDisplay.innerHTML = '';
+        const rowHeight = Math.ceil(totalHeight / CONFIG.maxRows);
+        
+        const baseUnitWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--unit-width'));
+        const dynamicUnitWidth = Math.max(baseUnitWidth, Math.floor(fontSize * 2.8));
+
+        if (!departures.length) {
+          this.#renderNoDeparturesMessage(destinationWidth, dotHeight, fontSize, rowHeight);
+    return;
+  }
+
+        departures.forEach(departure => {
+          const rowElement = this.createDepartureRow(
+            departure, 
+            dotHeight, 
+            fontSize, 
+            destinationWidth, 
+            lineColumnWidth, 
+            etaColumnWidth, 
+            dynamicUnitWidth
+          );
+          rowElement.style.height = rowHeight + 'px';
+          DOM.ledDisplay.appendChild(rowElement);
+        });
+      }
+
+      #renderNoDeparturesMessage(destinationWidth, dotHeight, fontSize, rowHeight) {
+        const row = document.createElement('div');
+        row.className = 'departure-row';
+        row.style.height = rowHeight + 'px';
+
+        const destinationColumn = document.createElement('div');
+        destinationColumn.className = 'departure-row__destination';
+        const message = textUtils.truncateText(
+          'Keine weiteren Fahrten 🚌', 
+          Math.floor(fontSize * CONFIG.textBoost), 
+          destinationWidth - 2
+        );
+        destinationColumn.innerHTML = ledSVG.generateSVG(
+          message, 
+          destinationWidth, 
+          dotHeight, 
+          fontSize, 
+          { clipWidth: destinationWidth - 2, align: 'left' }
+        );
+
+        row.appendChild(document.createElement('div'));
+        row.appendChild(destinationColumn);
+        row.appendChild(document.createElement('div'));
+        DOM.ledDisplay.appendChild(row);
+      }
+
+      renderMessage(message, isError = false) {
+        DOM.ledDisplay.innerHTML = '';
+        const messageElement = document.createElement('div');
+        messageElement.className = 'led-message';
+        messageElement.textContent = message;
+        DOM.ledDisplay.appendChild(messageElement);
+
+        if (isError) {
+          // Error state will be handled by the calling function
+          console.log("Rendering error message:", message);
+  } else {
+        }
+      }
+    }
+
+    // ===== MAIN APPLICATION =====
+    /**
+     * Main application controller class
+     * Orchestrates all components and manages the application lifecycle
+     */
+    class BusDepartureApp {
+      #state = new StateManager();
+      #textUtils = new TextUtils();
+      #ledSVG = new LEDSVGGenerator();
+      #apiService = new APIService();
+      #dataProcessor = new DataProcessor();
+      #renderer = new Renderer();
+
+      constructor() {
+        this.#setupEventListeners();
+        this.#startRefreshTimer();
+        // Don't run automatically - wait for station selection
+      }
+
+      #setupEventListeners() {
+        window.addEventListener('resize', () => this.run());
+        setInterval(() => this.#state.updateRefreshStatus(), 1000);
+        
+        // Handle station input changes
+        DOM.updateBtn.addEventListener('click', () => this.#updateStation());
+        DOM.stationInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            this.#updateStation();
+          }
+        });
+
+        // Autocomplete functionality
+        let debounceTimer;
+        DOM.stationInput.addEventListener('input', (e) => {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            this.#handleInputChange(e.target.value);
+          }, 300); // 300ms delay
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!e.target.closest('.autocomplete-wrapper')) {
+            this.#hideSuggestions();
+          }
+        });
+      }
+
+      #startRefreshTimer() {
+        setInterval(() => this.run(), CONFIG.refreshInterval);
+      }
+
+      #updateStation() {
+        const newStation = DOM.stationInput.value.trim();
+        if (newStation && newStation !== CONFIG.stopQuery) {
+          CONFIG.stopQuery = newStation;
+          this.#hideModal();
+          this.run();
+        }
+      }
+
+      /**
+       * Handle input changes for autocomplete
+       * @param {string} value - Current input value
+       */
+      async #handleInputChange(value) {
+        if (!value || value.length < 2) {
+          this.#hideSuggestions();
+          return;
+        }
+
+        try {
+          const suggestions = await this.#apiService.searchSuggestions(value);
+          this.#showSuggestions(suggestions);
+        } catch (error) {
+          console.warn("Error fetching suggestions:", error);
+          this.#hideSuggestions();
+        }
+      }
+
+      /**
+       * Show suggestions dropdown
+       * @param {Array} suggestions - Array of suggestion objects
+       */
+      #showSuggestions(suggestions) {
+        if (!suggestions || suggestions.length === 0) {
+          this.#hideSuggestions();
+          return;
+        }
+
+        DOM.suggestions.innerHTML = suggestions
+          .map(suggestion => `<div class="suggestion-item" data-name="${suggestion.name}">${suggestion.name}</div>`)
+          .join('');
+
+        // Add click listeners to suggestions
+        DOM.suggestions.querySelectorAll('.suggestion-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const stationName = item.dataset.name;
+            DOM.stationInput.value = stationName;
+            this.#hideSuggestions();
+            this.#updateStation();
+          });
+        });
+
+        DOM.suggestions.style.display = 'block';
+      }
+
+      /**
+       * Hide suggestions dropdown
+       */
+      #hideSuggestions() {
+        DOM.suggestions.style.display = 'none';
+        DOM.suggestions.innerHTML = '';
+      }
+
+      /**
+       * Hide the station selection modal
+       */
+      #hideModal() {
+        DOM.stationModal.style.display = 'none';
+      }
+
+      #calculateLayout() {
+        const totalHeight = DOM.ledDisplay.clientHeight;
+        const dotHeight = Math.floor(totalHeight / CONFIG.dotBaselineRows);
+        const lineColumnWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--line-width'));
+        
+        const fontSize = this.#textUtils.calculateFontSize(dotHeight, 0.78);
+        const baseEtaWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--eta-width'));
+        const dynamicEtaWidth = Math.max(baseEtaWidth, Math.floor(fontSize * 4.8));
+        
+        // Calculate extra width for 4 additional characters
+        const extraCharWidth = Math.floor(fontSize * CONFIG.textBoost * 0.6 * parseInt(getComputedStyle(document.documentElement).getPropertyValue('--destination-extra-chars')));
+        const destinationWidth = Math.floor(DOM.ledDisplay.clientWidth - lineColumnWidth - dynamicEtaWidth - 6) + extraCharWidth;
+
+        return {
+          totalHeight,
+          dotHeight,
+          lineColumnWidth,
+          etaColumnWidth: dynamicEtaWidth,
+          destinationWidth,
+          fontSize
+        };
+      }
+
+      async run() {
+        if (this.#state.isLoading) return;
+
+        if (!CONFIG.stopQuery) {
+          this.#renderer.renderMessage("❌ FEHLER: Bitte 'stopQuery' Variable einstellen. ❌", true);
+          this.#state.setError();
+    return;
+  }
+
+        const layout = this.#calculateLayout();
+
+        // Don't show loading message during refresh - keep current display
+
+        // Fetch fresh data from API
+        this.#state.setLoading(true);
+        
+        try {
+          const departures = await this.#apiService.loadDepartureData();
+          
+          const processedDepartures = this.#dataProcessor.processDepartures(departures || []);
+          
+          this.#renderer.renderDepartures(
+            processedDepartures, 
+            layout.totalHeight, 
+            layout.destinationWidth, 
+            layout.lineColumnWidth, 
+            layout.etaColumnWidth, 
+            layout.dotHeight, 
+            layout.fontSize
+          );
+          
+          this.#state.updateRefreshTime();
+        } catch (error) {
+          console.error("Critical error fetching data:", error);
+          this.#renderer.renderMessage("❌ API/Netzwerkfehler ❌\nVerbindung prüfen.", true);
+          this.#state.setError();
+  } finally {
+          this.#state.setLoading(false);
+        }
+      }
+    }
+
+    // ===== GLOBAL INSTANCES =====
+    /**
+     * Global instances for backward compatibility
+     * These are used by the main application class
+     */
+    const state = new StateManager();
+    const textUtils = new TextUtils();
+    const ledSVG = new LEDSVGGenerator();
+    const dataProcessor = new DataProcessor();
+
+    // ===== APPLICATION INITIALIZATION =====
+    /**
+     * Initialize the application when DOM is ready
+     * Creates main application instance and starts the system
+     */
+    new BusDepartureApp();
+</script>
+</body>
+</html>

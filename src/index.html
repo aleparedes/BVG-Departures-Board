@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Abfahrten – Bus Matrix</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@800;900&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/styles/main.css">
+</head>
+<body>
+  <!-- Station Selection Modal -->
+  <div id="stationModal" class="station-modal">
+    <div class="modal-content">
+      <h2>Haltestelle auswählen</h2>
+      <div class="station-input-container">
+        <div class="autocomplete-wrapper">
+          <input type="text" id="stationInput" placeholder="Parada (ej: Alexanderplatz)" class="station-input">
+          <div id="suggestions" class="suggestions-dropdown"></div>
+        </div>
+        <button id="updateStationBtn" class="update-btn">Aktualisieren</button>
+      </div>
+      <div class="station-info" id="stationInfo">Haltestelle wird gesucht...</div>
+    </div>
+  </div>
+
+  <div class="departure-board">
+    <main class="led-display" id="ledDisplay">
+      <div class="led-message">Lade Daten...</div>
+    </main>
+  </div>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>
+
