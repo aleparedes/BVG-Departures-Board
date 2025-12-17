@@ -2,6 +2,18 @@
 
 A real-time LED-style departure board for Berlin's public transport system (BVG/VBB). This single-page web application displays upcoming bus, tram, and train departures with an authentic LED display aesthetic.
 
+## Purpose
+
+This project was born out of a simple daily frustration: constantly checking my phone before leaving home to catch the bus. Instead of repeatedly pulling out my phone, I decided to repurpose an old unused phone and mount it in my corridor as a permanent departure display.
+
+**The goal is simple:**
+- See exactly when to leave home to catch the bus without waiting at the stop
+- Display real-time departure information in a convenient, always-visible location
+- Recreate the authentic look and feel of real BVG departure boards
+- Give new life to old electronics that would otherwise sit unused
+
+The result is a beautiful, LED-style departure board that runs continuously, helping you time your departure perfectly while adding a touch of retro charm to your home.
+
 ## Features
 
 - **Real-time Departure Information**: Fetches live data from BVG/VBB public transport APIs
@@ -11,6 +23,18 @@ A real-time LED-style departure board for Berlin's public transport system (BVG/
 - **Responsive Design**: Adapts to different screen sizes with dynamic font scaling
 - **Scrolling Text**: Long destination names scroll smoothly across the display
 - **Single-file Output**: Built as a self-contained HTML file for easy deployment
+
+## Screenshots
+
+### Station Selection Modal
+The interactive modal allows users to search and select stations with autocomplete functionality.
+
+![Station Selection Modal](./docs/images/station-modal.png)
+
+### LED Departure Board Display
+The main display shows real-time departure information in an authentic LED-style format with three columns: line number, destination, and time until departure.
+
+![LED Departure Board](./docs/images/departure-board.png)
 
 ## Technology Stack
 
@@ -40,6 +64,10 @@ BVG-Departures-Board/
 │       └── main.js             # Application initialization
 ├── dist/                        # Build output (gitignored)
 │   └── index.html              # Single bundled file
+├── docs/
+│   └── images/                 # Screenshots
+│       ├── station-modal.png
+│       └── departure-board.png
 ├── vite.config.js              # Vite configuration
 ├── package.json                # Dependencies and scripts
 └── README.md                   # This file
@@ -139,7 +167,7 @@ Edit `src/js/config.js` to customize the application:
 
 ```javascript
 export const CONFIG = {
-  stopQuery: "Rotkopfweg",        // Default station name
+  stopQuery: "Alexanderplatz",   // Default station name
   maxRows: 5,                     // Maximum departures to display
   dotBaselineRows: 6,             // Base rows for LED dot calculation
   lookAheadMinutes: 60,           // Minutes ahead to search

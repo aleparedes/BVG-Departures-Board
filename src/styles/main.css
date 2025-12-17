@@ -6,15 +6,8 @@
       --space-lg: 8px;
       --space-xl: 12px;
       
-      --header-height: 42px;
-      --footer-height: 44px;
-      --board-padding: var(--space-lg);
       --column-gap: 1px;
-      
-      --line-width: 120px;
-      --eta-width: 140px;
       --unit-width: 60px;
-      --destination-extra-chars: 3;
       
       --color-frame-bg: #e7e9ed;
       --color-frame-border: #c3c7cd;
@@ -82,10 +75,6 @@
       background: var(--color-led-bg);
     }
 
-    /* HEADER SECTION - Hidden */
-    .board-header {
-      display: none;
-    }
 
     /* ===== LED DISPLAY SECTION ===== */
     /* Main area that simulates the real LED display with visual effects */
@@ -116,7 +105,7 @@
     /* ===== DEPARTURE ROWS ===== */
     .departure-row {
     display: grid;
-      grid-template-columns: var(--line-width) 1fr auto;
+      grid-template-columns: auto 1fr auto;
     align-items: center;
     padding: 0;
       border-bottom: 1px solid rgba(255, 255, 255, 0.03);
@@ -129,16 +118,20 @@
     }
 
     .departure-row__line {
-      padding-left: var(--space-xs);
-      padding-right: var(--space-xs);
+      padding-left: 4px;
+      padding-right: 4px;
       display: flex;
       align-items: center;
       gap: 1px;
+      min-width: 0; /* Allow column to shrink below content size */
+      max-width: fit-content; /* Don't exceed content width */
+      overflow: hidden;
     }
 
     .departure-row__destination {
       overflow: hidden;
       position: relative;
+      min-width: 0; /* Allow column to shrink below content size */
     }
 
     .departure-row__destination.scrollable {
@@ -169,12 +162,15 @@
 
     .departure-row__eta {
     justify-self: end;
-    padding-right: var(--space-xs);
-    padding-left: var(--space-xs);
+    padding-right: 4px;
+    padding-left: 4px;
     display: flex;
     align-items: center;
-      gap: var(--space-xs);
+      gap: 4px;
       margin-right: 0;
+      min-width: 0; /* Allow column to shrink below content size */
+      max-width: fit-content; /* Don't exceed content width */
+      overflow: hidden;
     }
 
     .departure-row.arriving-now {
@@ -302,15 +298,6 @@
       min-height: 20px;
     }
 
-    /* ===== FOOTER ===== */
-    .board-footer {
-    display: grid;
-      grid-template-columns: auto 1fr auto;
-    align-items: center;
-      gap: var(--space-md);
-      padding: var(--space-md) var(--space-md) var(--space-lg) var(--space-md);
-    }
-
     .station-input-container {
       display: flex;
       gap: var(--space-sm);
@@ -402,42 +389,6 @@
     text-overflow: ellipsis;
   }
 
-    .status-indicator {
-      justify-self: end;
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-md);
-      font-size: clamp(12px, 1.8vw, 16px);
-      color: var(--color-text-secondary);
-    }
-
-    .bvg-brand {
-      background: var(--color-bvg-yellow);
-      color: var(--color-text-primary);
-      font-weight: 1000;
-      padding: var(--space-xs) var(--space-md);
-      border-radius: var(--space-xs);
-      border: 1px solid #b79b00;
-    }
-
-    .refresh-status {
-      padding: var(--space-xs) var(--space-md);
-      border-radius: 999px;
-      background: var(--color-white);
-      border: 1px solid #cfd3d8;
-      transition: background-color var(--animation-transition);
-    }
-
-    .refresh-status--loading {
-      background-color: var(--color-bvg-yellow) !important;
-      animation: pulse 1.5s infinite;
-    }
-
-    .refresh-status--error {
-      background-color: var(--color-led-alert) !important;
-      color: var(--color-white) !important;
-    }
-
     /* ===== MESSAGE STATES ===== */
   .led-message {
     height: 100%;
@@ -451,19 +402,7 @@
   }
 
     /* ===== RESPONSIVE DESIGN ===== */
-    @media (max-width: 768px) {
-      :root {
-        --line-width: 100px;
-        --eta-width: 140px;
-        --unit-width: 50px;
-      }
-    }
+    /* Column widths are measured based on content: line and time columns use auto (content-based), */
+    /* destination column uses 1fr (remaining space). This ensures optimal space usage. */
 
-    @media (max-width: 480px) {
-      :root {
-        --line-width: 80px;
-        --eta-width: 120px;
-        --unit-width: 45px;
-      }
-    }
 

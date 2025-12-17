@@ -10,20 +10,13 @@ export class DataProcessor {
       when: departure.when || departure.plannedWhen,
       plannedWhen: departure.plannedWhen,
       line: departure.line?.name || departure.line?.id || '',
-      product: departure.line?.product || departure.line?.mode || '',
       direction: departure.direction || departure.destination?.name || departure.directionId || '—',
       cancelled: !!departure.cancelled,
       delay: departure.delay || 0,
-      // Additional fields for better validation
-      platform: departure.platform,
+      // Additional fields for validation
       remarks: departure.remarks || [],
-      tripId: departure.tripId,
-      origin: departure.origin,
-      destination: departure.destination,
-      mode: departure.mode,
-      // Real-time status indicators
-      realtimeDataUpdatedAt: departure.realtimeDataUpdatedAt,
-      currentTripPosition: departure.currentTripPosition
+      // Real-time status indicator
+      realtimeDataUpdatedAt: departure.realtimeDataUpdatedAt
     };
   }
 
@@ -101,26 +94,6 @@ export class DataProcessor {
     return Math.max(0, minutes);
   }
 
-  /**
-   * Calculate delay information for display
-   * @param {Object} departure - Normalized departure object
-   * @returns {Object} Delay information
-   */
-  calculateDelayInfo(departure) {
-    if (!departure.plannedWhen) {
-      return { hasDelay: false, delayMinutes: 0, isOnTime: true };
-    }
-
-    const plannedTime = new Date(departure.plannedWhen);
-    const actualTime = new Date(departure.when);
-    const delayMinutes = Math.round((actualTime.getTime() - plannedTime.getTime()) / 60000);
-    
-    return {
-      hasDelay: delayMinutes > 0,
-      delayMinutes: Math.max(0, delayMinutes),
-      isOnTime: delayMinutes <= 1, // Consider on time if delay is 1 minute or less
-      isEarly: delayMinutes < 0
-    };
-  }
 }
+
 

@@ -40,15 +40,19 @@ export class Renderer {
   #createLineColumn(departure, dotHeight, fontSize, lineColumnWidth) {
     const lineColumn = document.createElement('div');
     lineColumn.className = 'departure-row__line';
+    lineColumn.style.width = lineColumnWidth + 'px';
+    lineColumn.style.maxWidth = lineColumnWidth + 'px'; // Prevent exceeding measured width
     const lineCode = (departure.line || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 4) || '—';
+    // Use actual column width for SVG, accounting for minimal padding
+    const padding = 8; // Minimal padding (4px left + 4px right)
+    const svgWidth = Math.max(10, lineColumnWidth - padding);
     lineColumn.innerHTML = this.ledSVG.generateSVG(
       lineCode, 
-      lineColumnWidth - 8, 
+      svgWidth, 
       dotHeight, 
       fontSize, 
-      { clipWidth: lineColumnWidth - 8, align: 'left' }
+      { clipWidth: svgWidth, align: 'left' }
     );
-    lineColumn.style.width = lineColumnWidth + 'px';
     return lineColumn;
   }
 
@@ -120,10 +124,15 @@ export class Renderer {
     const etaColumn = document.createElement('div');
     etaColumn.className = 'departure-row__eta';
     etaColumn.style.width = etaColumnWidth + 'px';
+    etaColumn.style.maxWidth = etaColumnWidth + 'px'; // Prevent exceeding measured width
     
     const minutes = this.dataProcessor.calculateMinutesUntil(departure.when);
     
-    const numberWidth = etaColumnWidth - unitWidth - 4;
+    // Calculate unit width dynamically if not provided
+    const calculatedUnitWidth = unitWidth || Math.floor(fontSize * 2.8);
+    const gap = 4; // Gap between number and "Min"
+    const padding = 8; // Minimal padding (4px left + 4px right)
+    const numberWidth = Math.max(10, etaColumnWidth - calculatedUnitWidth - gap - padding);
 
     // Minutes number
     const minutesElement = document.createElement('div');
@@ -213,8 +222,8 @@ export class Renderer {
     if (isError) {
       // Error state will be handled by the calling function
       console.log("Rendering error message:", message);
-    } else {
     }
   }
 }
+
 

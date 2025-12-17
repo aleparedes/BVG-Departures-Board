@@ -4,9 +4,7 @@ import { CONFIG } from './config.js';
  * Class to handle application state
  */
 export class StateManager {
-  #lastRefreshTime = Date.now();  // Timestamp of last successful refresh
   #isLoading = false;             // Current loading state
-  #refreshCountdown = CONFIG.refreshInterval / 1000; // Countdown in seconds
 
   /**
    * Getter to check if application is loading data
@@ -30,8 +28,6 @@ export class StateManager {
    * and refreshes visual state
    */
   updateRefreshTime() {
-    this.#lastRefreshTime = Date.now();
-    this.#refreshCountdown = CONFIG.refreshInterval / 1000; // Reset countdown
     this.#updateRefreshStatus();
   }
 
@@ -59,4 +55,5 @@ export class StateManager {
     this.#updateRefreshStatus();
   }
 }
+
 

@@ -137,22 +137,37 @@ export class BusDepartureApp {
 
   #calculateLayout() {
     const totalHeight = DOM.ledDisplay.clientHeight;
+    const totalWidth = DOM.ledDisplay.clientWidth;
     const dotHeight = Math.floor(totalHeight / CONFIG.dotBaselineRows);
-    const lineColumnWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--line-width'));
-    
     const fontSize = this.#textUtils.calculateFontSize(dotHeight, 0.78);
-    const baseEtaWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--eta-width'));
-    const dynamicEtaWidth = Math.max(baseEtaWidth, Math.floor(fontSize * 4.8));
+    const fontSizeBoost = Math.floor(fontSize * CONFIG.textBoost);
     
-    // Calculate extra width for 4 additional characters
-    const extraCharWidth = Math.floor(fontSize * CONFIG.textBoost * 0.6 * parseInt(getComputedStyle(document.documentElement).getPropertyValue('--destination-extra-chars')));
-    const destinationWidth = Math.floor(DOM.ledDisplay.clientWidth - lineColumnWidth - dynamicEtaWidth - 6) + extraCharWidth;
+    // Measure actual content width needed for line column (max 4 characters)
+    const maxLineCode = '9999'; // Worst case: 4 digits/characters
+    const lineCodePadding = 8; // Minimal padding (4px left + 4px right)
+    const measuredLineWidth = this.#textUtils.measureTextWidth(maxLineCode, fontSizeBoost);
+    const lineColumnWidth = Math.ceil(measuredLineWidth) + lineCodePadding;
+    
+    // Measure actual content width needed for time column
+    // Format: "999" (max minutes) + " Min" + minimal padding
+    const maxMinutes = '999'; // Worst case: 3 digits
+    const minText = 'Min';
+    const timePadding = 8; // Minimal padding (4px left + 4px right)
+    const gap = 4; // Gap between number and "Min"
+    const minutesWidth = this.#textUtils.measureTextWidth(maxMinutes, fontSizeBoost);
+    const minTextWidth = this.#textUtils.measureTextWidth(minText, fontSizeBoost);
+    const etaColumnWidth = Math.ceil(minutesWidth + minTextWidth + gap + timePadding);
+    
+    // Calculate destination width as remaining space
+    const columnGap = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--column-gap')) || 1;
+    const totalGaps = columnGap * 2; // Two gaps between three columns
+    const destinationWidth = Math.max(100, totalWidth - lineColumnWidth - etaColumnWidth - totalGaps);
 
     return {
       totalHeight,
       dotHeight,
       lineColumnWidth,
-      etaColumnWidth: dynamicEtaWidth,
+      etaColumnWidth,
       destinationWidth,
       fontSize
     };
