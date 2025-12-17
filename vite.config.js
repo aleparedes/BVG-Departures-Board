@@ -4,7 +4,7 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 export default defineConfig({
   root: 'src',
   plugins: [viteSingleFile()],
-  base: process.env.GITHUB_PAGES ? '/BVG-Departures-Board/' : '/',
+  base: '/BVG-Departures-Board/',
   build: {
     outDir: '../dist',
     emptyOutDir: true,
